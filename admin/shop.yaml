@@ -1,0 +1,24 @@
+listen : 5054
+runmode : debug		# 服务运行模式 debug/release
+timestamp_expire : 1800         # 请求时间戳过期时长
+#nonce_repeat : 1800	        # nonce串可重复间隔
+#session_expire : 300            # session过期时长i
+#server_url : h5api.test.weile.com
+#pay_transfer_url : http://h5api.test.weile.com/trade/v1/pay
+#external_ip : 39.107.124.19      # 服务器外网ip
+logs :
+  dir : ../log 			# 文件保存路径
+  file : shop          	# 文件名称,实际会保存为{filename}+{datetime}
+  level : 3			# 日志等级：0-error，1-warning，2-info，3-debug
+  savefile : false 		# 是否保存为文件，置为false会输出到标准输出
+mysql:                          # 数据库信息
+  addr : 127.0.0.1:3306
+  user : root
+  password : root
+  db : shop
+  max_open : 100
+  max_idle : 10
+redis :
+  addr : 127.0.0.1:6379
+  password :
+  db : 0

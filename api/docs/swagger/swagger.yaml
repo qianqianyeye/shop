@@ -1,0 +1,139 @@
+definitions:
+  model.Image:
+    properties:
+      create_at:
+        type: string
+      id:
+        type: integer
+      img_name:
+        type: string
+      img_type:
+        type: integer
+      img_url:
+        type: string
+      target_id:
+        type: integer
+    required:
+    - img_type
+    - img_url
+    type: object
+  model.ShopInfo:
+    properties:
+      contact_info:
+        type: string
+      contact_type:
+        type: integer
+      create_at:
+        type: string
+      discount_price:
+        type: number
+      id:
+        type: integer
+      market_price:
+        type: number
+      shop_describe:
+        type: string
+      shop_name:
+        type: string
+      sort_weight:
+        type: integer
+      type_id:
+        type: integer
+      update_at:
+        type: string
+    required:
+    - contact_info
+    - contact_type
+    - shop_name
+    - type_id
+    type: object
+  model.ShopStyle:
+    properties:
+      id:
+        type: integer
+      shop_id:
+        type: integer
+      style_describe:
+        type: string
+      style_name:
+        type: string
+    required:
+    - style_name
+    type: object
+info:
+  contact: {}
+  license: {}
+paths:
+  /admin/v1/shop/ashop:
+    post:
+      consumes:
+      - application/json
+      description: add by json ReqShopInfo
+      parameters:
+      - description: 商品信息
+        in: body
+        name: shop_info
+        required: true
+        schema:
+          $ref: '#/definitions/model.ShopInfo'
+          type: object
+      - description: 款式
+        in: body
+        name: shop_style
+        required: true
+        schema:
+          $ref: '#/definitions/model.ShopStyle'
+          type: object
+      - description: 款式图片
+        in: body
+        name: img_style
+        required: true
+        schema:
+          $ref: '#/definitions/model.Image'
+          type: object
+      - description: 商品图片
+        in: body
+        name: img_shop
+        required: true
+        schema:
+          $ref: '#/definitions/model.Image'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code":0,"data":null,"msg":"ok"}'
+          schema:
+            type: string
+      summary: 添加商品
+      tags:
+      - Admin
+  /admin/v1/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: 图片文件
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code":0,"data":{"img_save_url":"upload/images/8f81dcf6-b970-4ed1-bd02-ccf1c908c0f1.jpg","img_url":"localhost:5054/upload/images/8f81dcf6-b970-4ed1-bd02-ccf1c908c0f1.jpg"},"msg":"ok"}'
+          schema:
+            type: string
+      summary: 上传图片
+  /mobile/v1/shop/type:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code":0,"msg":"ok","shop_type":{"id":2,"parent_id":0,"c_name":"测试2","r_name":" тест
+            2","created_at":"14:57:22","update_at":"14:57:27"}}'
+          schema:
+            type: string
+      summary: 获取分类信息
