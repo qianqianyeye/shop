@@ -5,7 +5,7 @@ timestamp_expire : 1800         # 请求时间戳过期时长
 #session_expire : 300            # session过期时长i
 #server_url : h5api.test.weile.com
 #pay_transfer_url : http://h5api.test.weile.com/trade/v1/pay
-#external_ip : 39.107.124.19      # 服务器外网ip
+external_ip : localhost:5054 #39.106.42.104:80      # 服务器外网ip
 logs :
   dir : ../log 			# 文件保存路径
   file : shop          	# 文件名称,实际会保存为{filename}+{datetime}

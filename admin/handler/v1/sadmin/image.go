@@ -14,13 +14,13 @@ import (
 
 const (
 	ImageSavePath = "upload/images/"
-	PrefixUrl = "localhost"
+	//PrefixUrl = config.GetExternalIp()
 	RuntimeRootPath="runtime/"
 	ImageMaxSize=5* 1024 * 1024  //5MB
 	ImageAllowExts =".jpg,.jpeg,.png"
 )
 func GetImageFullUrl(name string) string {
-	return fmt.Sprintf(PrefixUrl+":%d", config.GetListen()) + "/" + GetImagePath() + name
+	return fmt.Sprintf(config.GetExternalIp()+":%d", config.GetListen()) + "/" + GetImagePath() + name
 }
 
 func GetImageName(name string) string {

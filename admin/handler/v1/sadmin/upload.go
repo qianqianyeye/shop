@@ -6,8 +6,14 @@ import (
 
 	"shop/admin/handler/model"
 	"git.jiaxianghudong.com/go/logs"
-	"net/http"
+	"shop/admin/mysql"
+	"os"
 )
+
+type reqImg struct {
+	ImgUrl string `json:"img_url" binding:"required"`
+	//Id int `json:"id" binding:"required"`
+}
 
 func UploadImage(c *gin.Context) {
 	appG := model.Gin{c}
@@ -46,12 +52,28 @@ func UploadImage(c *gin.Context) {
 	}
 
 	appG.Response(map[string]string{
-		"img_url":     GetImageFullUrl(imageName),
-		"img_save_url": savePath + imageName,
+		"img_url":     savePath + imageName,
+		"img_show_url": GetImageFullUrl(imageName),
 	})
 }
 
-func GetImg(c *gin.Context)  {
-	img :=http.Dir(GetImageFullPath())
-	c.JSON(http.StatusOK,img)
+func DeleteTargetImg(src string){
+	os.Remove(src)
+}
+
+func DeleteImg(c *gin.Context)  {
+	appG := model.Gin{c}
+	var reqImg reqImg
+	var img  model.Image
+	if err :=c.ShouldBind(&reqImg);err==nil{
+		src := RuntimeRootPath +reqImg.ImgUrl
+		os.Remove(src)
+		db.SqlDB.Find(&img,"img_url=?",reqImg.ImgUrl)
+		if img.ID!=0 {
+			db.SqlDB.Delete(&img)
+		}
+		appG.Response(nil)
+	}else {
+		appG.PResponse(err)
+	}
 }

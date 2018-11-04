@@ -43,7 +43,7 @@ func main()  {
 	//后台
 	//商品类别
 	admin := router.Group("/admin/v1")
-	admin.POST("shop/type",a.GetShopType)  //商品类别
+	admin.GET("shop/typelist",a.GetShopType)  //商品类别
 	admin.POST("shop/atype",a.AddShopType)  //添加商品类别
 	admin.PATCH("shop/utype",a.UpdateShopType)  //修改商品类别
 	admin.DELETE("shop/dtype/:id",a.DeleteShopType) //删除商品类别
@@ -67,15 +67,20 @@ func main()  {
 	admin.DELETE("shop/dversion/:id",a.DeleteVersion)
 
 	//管理员用户
-	admin.GET("user/list",a.GetUserList)
-	admin.POST("user/auser",a.AddUser)
-	admin.PATCH("user/uuser",a.UpdateUser)
-	admin.DELETE("user/duser/:id",a.DeleteUser)
+	//admin.GET("user/list",a.GetUserList)
+	//admin.POST("user/auser",a.AddUser)
+	//admin.PATCH("user/uuser",a.UpdateUser)
+	//admin.DELETE("user/duser/:id",a.DeleteUser)
+
+	//登陆
+	admin.POST("login",a.Login)
+	admin.PATCH("update/userinfo",a.UpdateUserInfo)
 
 	//图片上传
 	admin.POST("/upload", a.UploadImage)
-	router.Run(":5054")
-	//router.Run(fmt.Sprintf(":%d", config.GetListen()))
+	admin.POST("/deleteImage",a.DeleteImg)
+	//router.Run(":5054")
+	router.Run(fmt.Sprintf(":%d", config.GetListen()))
 }
 
 

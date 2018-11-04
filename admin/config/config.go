@@ -60,7 +60,8 @@ func Init() {
 	fmt.Println("--init config start")
 
 	// 初始化日志
-	str := utils.ReadConfFile("shop/admin/shop.yaml")
+	//str := utils.ReadConfFile("shop/admin/shop.yaml")
+	str := utils.ReadConfFile("shop.yaml")
 	/* 替换注释 */
 	reg := regexp.MustCompile(`\/\*[^(\*\/)]*\*\/`)
 	str = reg.ReplaceAllString(str, "")
@@ -123,4 +124,8 @@ func GetRedis() *EntityRedis {
 
 func GetListen() int {
 	return conf.Listen
+}
+
+func GetExternalIp()string  {
+	return conf.ExternalIp
 }

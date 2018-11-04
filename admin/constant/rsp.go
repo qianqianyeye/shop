@@ -36,7 +36,7 @@ const (
 	RC_CHANNEL_EXISTED = 2200003  //渠道已存在
 
 	RC_UPLOAD_FORMAT = 3300001  //图片格式不正确
-	RC_UPLOAD_FALL = 3300001  //图片格式不正确
+	RC_UPLOAD_FALL = 3300002  //图片格式不正确
 )
 
 func init() {
