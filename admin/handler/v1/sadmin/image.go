@@ -20,7 +20,7 @@ const (
 	ImageAllowExts =".jpg,.jpeg,.png"
 )
 func GetImageFullUrl(name string) string {
-	return fmt.Sprintf(config.GetExternalIp()+":%d", config.GetListen()) + "/" + GetImagePath() + name
+	return config.GetExternalIp() + "/" + GetImagePath() + name
 }
 
 func GetImageName(name string) string {

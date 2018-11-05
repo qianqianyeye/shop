@@ -2,7 +2,7 @@ package model
 
 import (
 	"github.com/gin-gonic/gin"
-	."shop/constant"
+	."shop/admin/constant"
 	"net/http"
 )
 

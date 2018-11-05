@@ -60,7 +60,8 @@ func Init() {
 	fmt.Println("--init config start")
 
 	// 初始化日志
-	str := utils.ReadConfFile("shop/shop.yaml")
+	//str := utils.ReadConfFile("shop/api/shop.yaml")
+	str := utils.ReadConfFile("api.yaml")
 	/* 替换注释 */
 	reg := regexp.MustCompile(`\/\*[^(\*\/)]*\*\/`)
 	str = reg.ReplaceAllString(str, "")
