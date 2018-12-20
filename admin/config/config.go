@@ -5,9 +5,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-
 	"gopkg.in/yaml.v2"
-
 	"git.jiaxianghudong.com/go/utils"
 )
 
@@ -16,18 +14,18 @@ var ostype = runtime.GOOS
 var conf ConfAPI
 
 type ConfAPI struct {
-	Listen          int               `yaml:"listen"`           // 监听端口
-	RunMode         string            `yaml:"runmode"`          // 服务运行模式
-	TimestampExpire int               `yaml:"timestamp_expire"` // 请求时间戳过期时长
-	NonceRepeat     int               `yaml:"nonce_repeat"`     // nonce串可重复间隔
-	SessionExpire   int               `yaml:"session_expire"`   // session过期时长
-	ServerUrl       string            `yaml:"server_url"`
-	PayTransferUrl  string            `yaml:"pay_transfer_url"`
-	IapVerifyUrl    string            `yaml:"iap_verify_url"`
-	ExternalIp      string            `yaml:"external_ip"`
-	Logs            EntityLogs        `yaml:"logs"` // 日志
-	Mysql           EntityMysql       `yaml:"mysql"`
-	Redis           EntityRedis       `yaml:"redis"`
+	Listen          int         `yaml:"listen"`           // 监听端口
+	RunMode         string      `yaml:"runmode"`          // 服务运行模式
+	TimestampExpire int         `yaml:"timestamp_expire"` // 请求时间戳过期时长
+	NonceRepeat     int         `yaml:"nonce_repeat"`     // nonce串可重复间隔
+	SessionExpire   int         `yaml:"session_expire"`   // session过期时长
+	ServerUrl       string      `yaml:"server_url"`
+	PayTransferUrl  string      `yaml:"pay_transfer_url"`
+	IapVerifyUrl    string      `yaml:"iap_verify_url"`
+	ExternalIp      string      `yaml:"external_ip"`
+	Logs            EntityLogs  `yaml:"logs"` // 日志
+	Mysql           EntityMysql `yaml:"mysql"`
+	Redis           EntityRedis `yaml:"redis"`
 }
 
 //
@@ -54,14 +52,12 @@ type EntityRedis struct {
 	DB   int64  `yaml:"db"`
 }
 
-
-
 func Init() {
 	fmt.Println("--init config start")
 
 	// 初始化日志
-//	str := utils.ReadConfFile("shop/api/api.yaml")
-	str := utils.ReadConfFile("api.yaml")
+	//str := utils.ReadConfFile("shop/admin/shop.yaml")
+	str := utils.ReadConfFile("shop.yaml")
 	/* 替换注释 */
 	reg := regexp.MustCompile(`\/\*[^(\*\/)]*\*\/`)
 	str = reg.ReplaceAllString(str, "")
@@ -76,7 +72,6 @@ func Init() {
 		fmt.Println(fmt.Sprintf(" RunMode:%s", conf.RunMode))
 		fmt.Println(fmt.Sprintf(" TimestampExpire:%d", conf.TimestampExpire))
 		fmt.Println(fmt.Sprintf(" RunMode:%s", conf.RunMode))
-
 
 		// logs
 		fmt.Println(fmt.Sprintf(" LOG:{Dir:%s\tFile:%s\tLevel:%d\tSaveFile:%t}",
@@ -96,7 +91,6 @@ func Init() {
 		fmt.Println("--init config err :", err.Error())
 	}
 }
-
 
 // 获取日志配置
 func GetLogs() *EntityLogs {
@@ -124,4 +118,8 @@ func GetRedis() *EntityRedis {
 
 func GetListen() int {
 	return conf.Listen
+}
+
+func GetExternalIp() string {
+	return conf.ExternalIp
 }

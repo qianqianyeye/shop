@@ -17,7 +17,7 @@ func InitDB(addr string,maxOpen int,maxIdle int) error{
 		logs.Error(err)
 		return err
 	}
-	SqlDB.LogMode(true)
+	//SqlDB.LogMode(true)
 	SqlDB.DB().SetMaxOpenConns(maxOpen)
 	SqlDB.DB().SetMaxIdleConns(maxIdle)
 	SqlDB.DB().SetConnMaxLifetime(60*time.Second)

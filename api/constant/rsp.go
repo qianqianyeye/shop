@@ -23,12 +23,14 @@ const (
 	/*
 	* 管理员模块
 	 */
+
 	RC_ADMIN_NOT_FOUND = 2000001 // 管理员不存在
 	RC_VALID_CODE_ERR  = 2000002 // 验证码错误
 	RC_ADMIN_EXISTED   = 2000003 // 用户已存在
 	RC_PASSWORD_ERR    = 2000004 // 管理员不存在
 	RC_APPS_NOT_FOUND  = 2000005 // 未找到可用应用
 	RC_PERMISSION_DENY = 2000006 // 没有权限
+	RC_ADMIN_EXPIRE =2000007  //登陆状态过期
 
 	RC_ORDER_NOT_FOUND  = 2100001 // 订单不存在
 	RC_ORDER_REPAIR_ERR = 2100002 // 订单修复失败
@@ -65,6 +67,7 @@ func init() {
 
 	mRsp[RC_UPLOAD_FORMAT] = "check img format"
 	mRsp[RC_UPLOAD_FALL] = "image upload fall"
+	mRsp[RC_ADMIN_EXPIRE]="Landing status expired"
 }
 
 // 获取错误码消息值

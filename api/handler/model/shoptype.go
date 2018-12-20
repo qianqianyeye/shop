@@ -8,6 +8,8 @@ type ShopType struct {
 	CreatedAt string `gorm:"column:created_at" json:"created_at,omitempty"`
 	UpdateAt string `gorm:"column:update_at" json:"update_at,omitempty"`
 
+	//TagId []int `gorm:"-" json:"tag_id,omitempty"`
+	//Tags []*Tag `gorm:"many2many:tag_type;"json:"tags,omitempty"`
 	Image []Image `gorm:"ForeignKey:TargetId;AssociationForeignKey:ID;" json:"image,omitempty"`
 }
 

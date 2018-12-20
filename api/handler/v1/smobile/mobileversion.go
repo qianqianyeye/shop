@@ -10,7 +10,8 @@ import (
 type RspVersion struct {
 	Code int `json:"code"`
 	Msg string `json:"msg"`
-	AppVersion model.AppVersion `json:"app_version"`
+	Data interface{} `json:"data"`
+//	AppVersion model.AppVersion `json:"app_version"`
 }
 func GetLatestVersion (c *gin.Context)  {
 	appType :=c.Param("app_type")
@@ -18,11 +19,12 @@ func GetLatestVersion (c *gin.Context)  {
 	if appType != "" {
 		var appVersion model.AppVersion
 		db.SqlDB.Order("id desc").Limit(1).Find(&appVersion,"type=?",appType)
-		rsp.AppVersion=appVersion
+		rsp.Data=appVersion
 		c.JSON(http.StatusOK,rsp)
 	}else {
 		rsp.Code=RC_PARM_ERR
 		rsp.Msg=M(RC_PARM_ERR)
+		rsp.Data=nil
 		c.JSON(http.StatusOK,rsp)
 	}
 

@@ -8,6 +8,8 @@ import (
 	"git.jiaxianghudong.com/go/logs"
 	"shop/admin/mysql"
 	"os"
+	"strings"
+	"shop/admin/config"
 )
 
 type reqImg struct {
@@ -30,7 +32,7 @@ func UploadImage(c *gin.Context) {
 
 	imageName := GetImageName(image.Filename)
 	fullPath := GetImageFullPath()
-	savePath := GetImagePath()
+	//savePath := GetImagePath()
 	src := fullPath + imageName
 
 	if !CheckImageExt(imageName) || !CheckImageSize(file) {
@@ -52,13 +54,14 @@ func UploadImage(c *gin.Context) {
 	}
 
 	appG.Response(map[string]string{
-		"img_url":     savePath + imageName,
-		"img_show_url": GetImageFullUrl(imageName),
+		"img_url":     "http://"+GetImageFullUrl(imageName),
+		//"img_show_url": GetImageFullUrl(imageName),
 	})
 }
 
 func DeleteTargetImg(src string){
-	os.Remove(src)
+	src = strings.Replace(src,"http://"+config.GetExternalIp() + "/","",1)
+	os.Remove(RuntimeRootPath+src)
 }
 
 func DeleteImg(c *gin.Context)  {
@@ -66,8 +69,7 @@ func DeleteImg(c *gin.Context)  {
 	var reqImg reqImg
 	var img  model.Image
 	if err :=c.ShouldBind(&reqImg);err==nil{
-		src := RuntimeRootPath +reqImg.ImgUrl
-		os.Remove(src)
+		DeleteTargetImg(reqImg.ImgUrl)
 		db.SqlDB.Find(&img,"img_url=?",reqImg.ImgUrl)
 		if img.ID!=0 {
 			db.SqlDB.Delete(&img)

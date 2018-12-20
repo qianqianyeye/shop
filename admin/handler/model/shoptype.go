@@ -7,7 +7,9 @@ type ShopType struct {
 	RName string `gorm:"column:r_name" json:"r_name"`
 	CreatedAt string `gorm:"column:created_at" json:"created_at"`
 	UpdateAt string `gorm:"column:update_at" json:"update_at"`
-
+	
+	//TagId []int `gorm:"-" json:"tag_id,omitempty"`
+	//Tags []*Tag `gorm:"many2many:tag_type;"json:"tag_type,omitempty"`
 	Image []Image `gorm:"ForeignKey:TargetId;AssociationForeignKey:ID;" json:"image,omitempty"`
 }
 

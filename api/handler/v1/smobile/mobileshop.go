@@ -10,6 +10,7 @@ import (
 	."shop/api/constant"
 	. "shop/api/utils"
 	"shop/api/mysql"
+	"strings"
 )
 
 type RspShop struct {
@@ -18,7 +19,7 @@ type RspShop struct {
 type RspShopTypeList struct {
 	Code         int        `json:"code"`
 	Msg          string     `json:"msg"`
-	ShopTypeList []ShopType `json:"shop_type_list"`
+	Data         interface{} `json:"data"`
 	PageModel    PageModel  `json:"page"`
 }
 
@@ -29,28 +30,30 @@ func GetShopType(c *gin.Context)  {
 		page := GetPageInfo(req.Page_size, req.Current)
 		var ShopTypeList []ShopType
 		var count Count
-		db.SqlDB.Order("update_at desc").Offset(page.OffSet).Limit(page.PageSize).Preload("Image").Find(&ShopTypeList)
+		db.SqlDB.Order("update_at desc").Offset(page.OffSet).Limit(page.PageSize).Preload("Image","img_type=3").Find(&ShopTypeList)
 		db.SqlDB.Table("shop_type").Select("count(*) count").Scan(&count)
-		rsp.ShopTypeList = ShopTypeList
+		rsp.Data = ShopTypeList
 		rsp.PageModel.Current = page.Current
 		rsp.PageModel.Total = count.Count
 		rsp.PageModel.PageSize = page.PageSize
 		c.JSON(http.StatusOK, rsp)
 	} else {
-		rsp = RspShopTypeList{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspShopTypeList{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 		c.JSON(http.StatusOK,rsp)
 	}
 }
 type RspShopList struct {
 	Code      int             `json:"code"`
 	Msg       string          `json:"msg"`
-	ShopList  []ShopInfo      `json:"shop_list"`
+	Data     interface{} 	  `json:"data"`
+	//ShopList  []ShopInfo      `json:"shop_list"`
 	PageModel utils.PageModel `json:"page"`
 }
 type RspShopCommon struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
-	ShopInfo ShopInfo `json:"shop_info"`
+	Data interface{} `json:"data"`
+	//ShopInfo ShopInfo `json:"shop_info"`
 }
 type ReqShopList struct {
 	Current   string `form:"current"  binding:"required"`
@@ -60,6 +63,7 @@ type ReqShopList struct {
 	SortField string `form:"sort_field" json:"sort_field"`
 	Sort      string `form:"sort" json:"sort"`
 	TypeId      int     `form:"type_id" json:"type_id"`
+	Tags      string  `form:"tags" json:"tags"`
 }
 type Count struct {
 	Count int
@@ -74,21 +78,58 @@ func GetShopList(c *gin.Context)  {
 		var count Count
 		sdb:=db.SqlDB.Table("shop_info")
 		cdb :=db.SqlDB.Table("shop_info")
+		typeTagMap := make(map[int64]int64)
+		if len(req.Tags)>0 {
+			tagArr := strings.Split(req.Tags,",")
+			var typeTags []TagType
+			cond, vals, err := WhereBuild(map[string]interface{}{
+				"tag_id in": tagArr,
+			})
+			if err!=nil {
+				logs.Error(err)
+			}
+			err =db.SqlDB.Where(cond, vals...).Find(&typeTags).Error
+			if err!=nil {
+				logs.Error(err)
+			}
+			for _,v:=range typeTags {
+				typeTagMap[v.ShopInfoId]=v.TagId
+			}
+			var shopId []int64
+			for k,_:=range typeTagMap {
+				shopId=append(shopId,k)
+			}
+			sdb=sdb.Where("id in (?)",shopId)
+			cdb=cdb.Where("id in (?)",shopId)
+		}
+
 		if req.SortField=="" {
 			req.SortField="update_at"
 		}
 		if req.Sort=="" {
 			req.Sort=" desc"
 		}
-		if req.TypeId!=0 {
+		if req.TypeId !=0 {
 			sdb=sdb.Where("type_id=?",req.TypeId)
 			cdb=cdb.Where("type_id=?",req.TypeId)
 		}
+
 		if  req.Condition != "" {
+			conditionArr :=strings.Split(req.Condition," ")
+			var parmCondition string
+			var parmArr []string
+			for _,v:=range conditionArr{
+				parmCondition = "(shop_name like '%"+v+"%' or r_shop_name like '%"+v+"%' or shop_describe like '%"+v+"%' or r_shop_describe like '%"+v+"%')"
+				parmArr=append(parmArr,parmCondition)
+			}
+			var whereSql string
+			for  i,_:=range parmArr{
+				whereSql+=parmArr[i]+" or "
+			}
+			whereSql=whereSql[:len(whereSql)-3]
 			err=sdb.Order(req.SortField+" "+req.Sort).Offset(page.OffSet).Limit(page.PageSize).
-				Select("id,shop_name,r_shop_name,market_price,discount_price,shop_describe,r_shop_describe").
-				Where("shop_name like ? or r_shop_name like ? or shop_describe like ? or r_shop_describe like ?", "%"+
-				req.Condition+"%","%"+req.Condition+"%","%"+req.Condition+"%","%"+req.Condition+"%").Scan(&ShopInfoList).Error
+				Select("id,shop_name,r_shop_name,market_price,discount_price,r_market_price,r_discount_price,shop_describe,r_shop_describe").
+				Where(whereSql).Scan(&ShopInfoList).Error
 			var ids []int
 			for _,v:=range ShopInfoList{
 				ids=append(ids, int(v.ID))
@@ -111,21 +152,19 @@ func GetShopList(c *gin.Context)  {
 					}
 				}
 			}
-
-			err=cdb.Select("count(*) count").Where("shop_name like ? or " +
-				"r_shop_name like ? or shop_describe like ? or r_shop_describe like ?", "%"+req.Condition+"%",
-				"%"+req.Condition+"%","%"+req.Condition+"%","%"+req.Condition+"%").Scan(&count).Error
+			err=cdb.Select("count(*) count").Where(whereSql).Scan(&count).Error
 
 			if err!=nil {
 				rsp.Code = RC_SYS_ERR
 				rsp.Msg = M(RC_SYS_ERR)
+				rsp.Data=nil
 				logs.Error(err)
 				c.JSON(http.StatusOK, rsp)
 			}
 
 		} else {
 			err=sdb.Order(req.SortField+" "+req.Sort).Offset(page.OffSet).Limit(page.PageSize).
-				Select("id,shop_name,r_shop_name,market_price,discount_price,shop_describe,r_shop_describe").Scan(&ShopInfoList).Error
+				Select("id,shop_name,market_price,discount_price,r_shop_name,r_market_price,r_discount_price,shop_describe,r_shop_describe").Scan(&ShopInfoList).Error
 			var ids []int
 			for _,v:=range ShopInfoList{
 				ids=append(ids, int(v.ID))
@@ -153,11 +192,12 @@ func GetShopList(c *gin.Context)  {
 			if err !=nil {
 				rsp.Code = RC_SYS_ERR
 				rsp.Msg = M(RC_SYS_ERR)
+				rsp.Data=nil
 				logs.Error(err)
 				c.JSON(http.StatusOK, rsp)
 			}
 		}
-		rsp.ShopList = ShopInfoList
+		rsp.Data = ShopInfoList
 		rsp.PageModel.Current = page.Current
 		rsp.PageModel.Total = count.Count
 		rsp.PageModel.PageSize = page.PageSize
@@ -165,6 +205,7 @@ func GetShopList(c *gin.Context)  {
 	} else {
 		rsp.Code = RC_PARM_ERR
 		rsp.Msg = M(RC_PARM_ERR)
+		rsp.Data=nil
 		c.JSON(http.StatusOK, rsp)
 	}
 }
@@ -175,13 +216,14 @@ func GetShopDetails(c *gin.Context)  {
 	if id!="" {
 		var shopInfo ShopInfo
 		err:=db.SqlDB.Preload("ShopStyle.Image", "img_type=2").Preload("ShopStyle").Preload("Image", "img_type=1").
-			Preload("ShopType.Image","img_type=3").Preload("ShopType").Find(&shopInfo,"id=?",id).Error
+			Preload("ShopType.Image","img_type=3").Preload("Tags").Preload("ShopType").Find(&shopInfo,"id=?",id).Error
 		if err!=nil {
 			rsp.Code=RC_SYS_ERR
 			rsp.Msg=M(RC_SYS_ERR)
+			rsp.Data=nil
 			logs.Error(err)
 		}
-		rsp.ShopInfo=shopInfo
+		rsp.Data=shopInfo
 	}else {
 		rsp.Code=RC_PARM_ERR
 		rsp.Msg=M(RC_PARM_ERR)
@@ -191,5 +233,11 @@ func GetShopDetails(c *gin.Context)  {
 
 func GetShopSearch(C *gin.Context)  {
 
+}
+
+func GetHotList(c *gin.Context)  {
+	var Hots []HotSearch
+	db.SqlDB.Order("sort desc").Limit(10).Find(&Hots)
+	c.JSON(http.StatusOK,gin.H{"code":RC_OK,"msg":M(RC_OK),"data":Hots})
 }
 

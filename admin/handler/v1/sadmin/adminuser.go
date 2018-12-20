@@ -11,17 +11,48 @@ import (
 	"shop/admin/mysql"
 	"crypto/md5"
 	"fmt"
+	"sync"
+	"time"
+	"shop/api/constant"
 )
 
 type RspAdmin struct {
 	Code         int        `json:"code"`
 	Msg          string     `json:"msg"`
-	Admin Admin `json:"admin"`
+	Data interface{} `json:"data"`
 	Token string `json:"token"`
 }
+var AdminMap *sync.Map
+func init() {
+	AdminMap=new(sync.Map)
+}
 
+type AdminMapModel struct {
+	Admin Admin
+	t time.Time
+}
+
+func GetCurStatus(c *gin.Context)  {
+	token:=c.Request.Header.Get("token")
+	if v,ok:=AdminMap.Load(token);ok {
+		temp:=v.(AdminMapModel)
+		if time.Now().Unix()-temp.t.Unix()>60*60*2{
+			AdminMap.Delete(token)
+			c.JSON(http.StatusOK,RspCommon{Code:constant.RC_ADMIN_EXPIRE,Msg:M(constant.RC_ADMIN_EXPIRE),Data:nil})
+			return
+		}
+		var AM AdminMapModel
+		AM.t=time.Now()
+		AM.Admin=temp.Admin
+		AdminMap.Store(token,AM)
+		c.JSON(http.StatusOK,RspCommon{Code:constant.RC_OK,Msg:M(constant.RC_OK),Data:temp.Admin})
+		return
+	}
+	c.JSON(http.StatusOK,RspCommon{Code:constant.RC_ADMIN_EXPIRE,Msg:"token not found",Data:nil})
+	return
+}
 func Login(c *gin.Context)  {
-	rsp := RspAdmin{Code: RC_OK, Msg: M(RC_OK)}
+	rsp := RspAdmin{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 	var req Admin
 	if err := c.ShouldBind(&req); err == nil {
 		//tx:=db.SqlDB.Begin()
@@ -48,10 +79,12 @@ func Login(c *gin.Context)  {
 		guid, _ := uuid.NewV4()
 		token := utils.Md5Sum(guid.String())
 		rsp.Token=token
-		rsp.Admin=admin
+		rsp.Data=admin
+		AM:=AdminMapModel{Admin:admin,t:time.Now()}
+		AdminMap.Store(token,AM)
 		c.JSON(http.StatusOK,rsp)
 	} else {
-		rsp = RspAdmin{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspAdmin{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 		c.JSON(http.StatusOK,rsp)
 	}
 }

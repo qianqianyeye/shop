@@ -16,47 +16,67 @@ import (
 type RspCommon struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
+	Data interface{} `json:"data"`
 }
 type RspShopTypeList struct {
 	Code         int        `json:"code"`
 	Msg          string     `json:"msg"`
-	ShopTypeList []ShopType `json:"shop_type_list"`
+	//ShopTypeList []ShopType `json:"shop_type_list"`
+	Data      interface{} `json:"data"`
 	PageModel    PageModel  `json:"page"`
 }
 
 func GetShopType(c *gin.Context) {
-	rsp := RspShopTypeList{Code: RC_OK, Msg: M(RC_OK)}
+	rsp := RspShopTypeList{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 	var req ReqShopList
 	if err := c.ShouldBindWith(&req, binding.Query); err == nil {
 		page := GetPageInfo(req.Page_size, req.Current)
 		var ShopTypeList []ShopType
 		var count Count
-		db.SqlDB.Order("update_at desc").Offset(page.OffSet).Limit(page.PageSize).Preload("Image").Find(&ShopTypeList)
+		db.SqlDB.Order("update_at desc").Offset(page.OffSet).Limit(page.PageSize).Preload("Image","img_type=3").Preload("Tags").Find(&ShopTypeList)
+		//for i,_:=range ShopTypeList{
+		//	tag := Tag{}
+		//	db.SqlDB.Model(&tag).Related(&ShopTypeList[i],"Tags")
+		//}
 		db.SqlDB.Table("shop_type").Select("count(*) count").Scan(&count)
-		rsp.ShopTypeList = ShopTypeList
+		rsp.Data = ShopTypeList
 		rsp.PageModel.Current = page.Current
 		rsp.PageModel.Total = count.Count
 		rsp.PageModel.PageSize = page.PageSize
 		c.JSON(http.StatusOK, rsp)
 	} else {
-		rsp = RspShopTypeList{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspShopTypeList{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 		c.JSON(http.StatusOK,rsp)
 	}
 }
 
 func AddShopType(c *gin.Context) {
-	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK)}
+	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 	var req ShopType
 	if err := c.ShouldBind(&req); err == nil {
-		//tx:=db.SqlDB.Begin()
+		tx:=db.SqlDB.Begin()
 		req.UpdateAt=GetStringDateTime(time.Now())
 		req.CreatedAt=GetStringDateTime(time.Now())
 		for i,_ := range req.Image{
 			req.Image[i].CreateAt=GetStringDateTime(time.Now())
 		}
-		db.SqlDB.Create(&req)
+		err :=tx.Create(&req).Error
+		if err!=nil {
+			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
+			tx.Rollback()
+		}
+		//for _,v:=range req.TagId{
+		//	tagType := TagType{TagId:int64(v),ShopTypeId:req.ID}
+		//	err:=tx.Create(&tagType).Error
+		//	if err!=nil {
+		//		rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
+		//		tx.Rollback()
+		//		break
+		//	}
+		//}
+		tx.Commit()
 	} else {
-		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 	}
 	defer func() {
 		c.JSON(http.StatusOK, rsp)
@@ -65,22 +85,28 @@ func AddShopType(c *gin.Context) {
 
 func DeleteShopType(c *gin.Context) {
 	id := c.Param("id")
-	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK)}
+	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 	if id != "" {
 		tx := db.SqlDB.Begin()
+		deleteImg(id,3)
 		//删除图片
 		if err := tx.Where("target_id=? and img_type=3", id).Delete(Image{}).Error; err != nil {
 			tx.Rollback()
-			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR)}
+			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
 		}
 		//删除类型
 		if err := tx.Where("id=?", id).Delete(ShopType{}).Error; err != nil {
 			tx.Rollback()
-			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR)}
+			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
 		}
+		//删除tag关系
+		//if err := tx.Where("shop_type_id=?", id).Delete(TagType{}).Error; err != nil {
+		//	tx.Rollback()
+		//	rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
+		//}
 		tx.Commit()
 	} else {
-		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 	}
 	defer func() {
 		c.JSON(http.StatusOK, rsp)
@@ -88,14 +114,16 @@ func DeleteShopType(c *gin.Context) {
 }
 
 func UpdateShopType(c *gin.Context) {
-	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK)}
+	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 	var req ShopType
 	if err := c.ShouldBind(&req); err == nil {
 		tx := db.SqlDB.Begin()
+		//deleteImg(strconv.Itoa(int(req.ID)),"3")
+		deleteUpImg(req.ID,3,req.Image)
 		//删除旧的图片连接
 		if err := tx.Where("target_id=? and img_type=3", req.ID).Delete(Image{}).Error; err != nil {
 			tx.Rollback()
-			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR)}
+			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
 			return
 		}
 		//插入新的图片
@@ -105,7 +133,7 @@ func UpdateShopType(c *gin.Context) {
 			v.CreateAt=GetStringDateTime(time.Now())
 			if err := tx.Create(&v).Error; err != nil {
 				tx.Rollback()
-				rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR)}
+				rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
 				return
 			}
 		}
@@ -115,14 +143,28 @@ func UpdateShopType(c *gin.Context) {
 		delete(ShopTypeMap, "id")
 		delete(ShopTypeMap, "image")
 		delete(ShopTypeMap, "created_at")
+		//delete(ShopTypeMap,"tag")
+		//delete(ShopTypeMap,"tag_id")
+		//delete(ShopTypeMap,"tag_type")
 		if err := tx.Table("shop_type").Where("id=?", req.ID).Update(ShopTypeMap).Error; err != nil {
 			tx.Rollback()
-			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR)}
+			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
 			return
 		}
+		//tx.Where("shop_type_id=?", req.ID).Delete(TagType{})
+		//for _,v:=range req.TagId{
+		//	tagType := TagType{TagId:int64(v),ShopTypeId:req.ID}
+		//	err:=tx.Create(&tagType).Error
+		//	if err!=nil {
+		//		rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
+		//		tx.Rollback()
+		//		break
+		//	}
+		//}
+
 		tx.Commit()
 	} else {
-		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 	}
 	defer func() {
 		c.JSON(http.StatusOK, rsp)
@@ -132,7 +174,8 @@ func UpdateShopType(c *gin.Context) {
 type RspHotList struct {
 	Code         int        `json:"code"`
 	Msg          string     `json:"msg"`
-	HotSearchList[]HotSearch `json:"hot_search_list"`
+	Data    interface{} `json:"data"`
+	//HotSearchList[]HotSearch `json:"hot_search_list"`
 	PageModel    PageModel  `json:"page"`
 }
 
@@ -145,19 +188,19 @@ func GetHotKey(c *gin.Context) {
 		var count Count
 		db.SqlDB.Order("sort desc").Offset(page.OffSet).Limit(page.PageSize).Find(&HotList)
 		db.SqlDB.Table("hot_search").Select("count(*) count").Scan(&count)
-		rsp.HotSearchList = HotList
+		rsp.Data = HotList
 		rsp.PageModel.Current = page.Current
 		rsp.PageModel.Total = count.Count
 		rsp.PageModel.PageSize = page.PageSize
 		c.JSON(http.StatusOK, rsp)
 	} else {
-		rsp = RspHotList{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspHotList{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 		c.JSON(http.StatusOK,rsp)
 	}
 }
 
 func AddHotKey(c *gin.Context) {
-	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK)}
+	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 	var req HotSearch
 	if err := c.ShouldBind(&req); err == nil {
 		var err error
@@ -166,24 +209,24 @@ func AddHotKey(c *gin.Context) {
 		err=db.SqlDB.Create(&req).Error
 		err =db.SqlDB.Model(&req).Update("sort", req.ID).Error
 		if err !=nil {
-			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR)}
+			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
 		}
 		c.JSON(http.StatusOK,rsp)
 	}else {
-		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 		c.JSON(http.StatusOK,rsp)
 	}
 }
 
 func DeleteHotKey(c *gin.Context) {
 	id :=c.Param("id")
-	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK)}
+	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 	if id!="" {
 		if err :=db.SqlDB.Where("id=?",id).Delete(HotSearch{}).Error;err!=nil{
-			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR)}
+			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
 		}
 	}else {
-		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 	}
 	defer func() {
 		c.JSON(http.StatusOK,rsp)
@@ -191,7 +234,7 @@ func DeleteHotKey(c *gin.Context) {
 }
 
 func UpdateHotKey(c *gin.Context) {
-	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK)}
+	rsp := RspCommon{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 	var req HotSearch
 	if err := c.ShouldBind(&req); err == nil {
 		//req.CreateAt=GetStringDateTime(time.Now())
@@ -213,7 +256,7 @@ func UpdateHotKey(c *gin.Context) {
 					err=tx.Table("hot_search").Where("id=?",topHot.ID).Update("sort",req.Sort).Error
 					tx.Commit()
 				}
-				rsp = RspCommon{Code: RC_OK, Msg: M(RC_OK)}
+				rsp = RspCommon{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 			}else if req.Action==2 {
 				//下
 				var downHot HotSearch
@@ -225,9 +268,9 @@ func UpdateHotKey(c *gin.Context) {
 					err =tx.Table("hot_search").Where("id=?",downHot.ID).Update("sort",req.Sort).Error
 					tx.Commit()
 				}
-				rsp = RspCommon{Code: RC_OK, Msg: M(RC_OK)}
+				rsp = RspCommon{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 			}else {
-				rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+				rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 			}
 		}else {
 			delete(hotMap, "id")
@@ -237,10 +280,10 @@ func UpdateHotKey(c *gin.Context) {
 			err=db.SqlDB.Table("hot_search").Where("id=?",req.ID).Update(hotMap).Error
 		}
 		if err !=nil {
-			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR)}
+			rsp = RspCommon{Code: RC_SYS_ERR, Msg: M(RC_SYS_ERR),Data:nil}
 		}
 	}else {
-		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR)}
+		rsp = RspCommon{Code: RC_PARM_ERR, Msg: M(RC_PARM_ERR),Data:nil}
 	}
 	defer func() {
 		c.JSON(http.StatusOK,rsp)
@@ -262,7 +305,8 @@ type ReqShopInfo struct {
 type RspShopList struct {
 	Code      int             `json:"code"`
 	Msg       string          `json:"msg"`
-	ShopList  []ShopInfo      `json:"shop_list"`
+	Data  interface{} `json:"data"`
+	//ShopList  []ShopInfo      `json:"shop_list"`
 	PageModel utils.PageModel `json:"page"`
 }
 
@@ -277,7 +321,7 @@ type Count struct {
 }
 
 func GetShopList(c *gin.Context) {
-	rsp := RspShopList{Code: RC_OK, Msg: M(RC_OK)}
+	rsp := RspShopList{Code: RC_OK, Msg: M(RC_OK),Data:nil}
 	var req ReqShopList
 	if err := c.ShouldBindWith(&req, binding.Query); err == nil {
 		page := GetPageInfo(req.Page_size, req.Current)
@@ -286,7 +330,7 @@ func GetShopList(c *gin.Context) {
 		var count Count
 		if req.FieldName != "" && req.Condition != "" {
 			err=db.SqlDB.Order("update_at desc").Offset(page.OffSet).Limit(page.PageSize).Preload("ShopStyle.Image", "img_type=2").Preload("ShopStyle").Preload("Image", "img_type=1").
-				Preload("ShopType").Find(&ShopInfoList, req.FieldName+" like ?", "%"+req.Condition+"%").Error
+				Preload("Tags").Preload("ShopType").Find(&ShopInfoList, req.FieldName+" like ?", "%"+req.Condition+"%").Error
 			err=db.SqlDB.Table("shop_info").Select("count(*) count").Where(req.FieldName+" like ?", "%"+req.Condition+"%").Scan(&count).Error
 			if err!=nil {
 				rsp.Code = RC_SYS_ERR
@@ -296,7 +340,7 @@ func GetShopList(c *gin.Context) {
 			}
 		} else {
 			err=db.SqlDB.Order("update_at desc").Offset(page.OffSet).Limit(page.PageSize).Preload("ShopStyle.Image", "img_type=2").Preload("ShopStyle").Preload("Image", "img_type=1").
-				Preload("ShopType").Find(&ShopInfoList).Error
+			Preload("Tags").Preload("ShopType").Find(&ShopInfoList).Error
 			err=db.SqlDB.Table("shop_info").Select("count(*) count").Scan(&count).Error
 			if err !=nil {
 				rsp.Code = RC_SYS_ERR
@@ -305,7 +349,8 @@ func GetShopList(c *gin.Context) {
 				c.JSON(http.StatusOK, rsp)
 			}
 		}
-		rsp.ShopList = ShopInfoList
+
+		rsp.Data = ShopInfoList
 		rsp.PageModel.Current = page.Current
 		rsp.PageModel.Total = count.Count
 		rsp.PageModel.PageSize = page.PageSize
@@ -365,6 +410,15 @@ func AddShop(c *gin.Context) {
 				}
 			}
 		}
+		for _,v:=range req.Shop.ShopInfo.TagId{
+			tagType := TagType{TagId:int64(v),ShopTypeId:req.Shop.ShopInfo.TypeId,ShopInfoId:shop.ID}
+			err:=tx.Create(&tagType).Error
+			if err!=nil {
+				g.FResponse(nil)
+				tx.Rollback()
+				break
+			}
+		}
 		tx.Commit()
 		g.Response(nil)
 	} else {
@@ -414,6 +468,11 @@ func DeleteShop(c *gin.Context) {
 				}
 			}
 		}
+		//删除tag关系
+		if err := tx.Where("shop_info_id=?", id).Delete(TagType{}).Error; err != nil {
+			tx.Rollback()
+			g.FResponse(nil)
+		}
 		tx.Commit()
 		g.Response(nil)
 		//删除磁盘存储图片
@@ -426,6 +485,7 @@ func UpdateShop(c *gin.Context) {
 	var req ReqShopInfo
 	if err := c.ShouldBind(&req); err == nil {
 		tx := db.SqlDB.Begin()
+		deleteUpImg(req.Shop.ShopInfo.ID,1,req.Shop.ImgShop)
 		//删除旧的商品图片
 		if err := tx.Where("target_id=? and img_type=1", req.Shop.ShopInfo.ID).Delete(Image{}).Error; err != nil {
 			tx.Rollback()
@@ -447,6 +507,7 @@ func UpdateShop(c *gin.Context) {
 		var oldStyle []ShopStyle
 		db.SqlDB.Find(&oldStyle, "shop_id=?", req.Shop.ShopInfo.ID)
 		for _, v := range oldStyle {
+			deleteUpImg(v.ID,2,v.Image)
 			if err := tx.Where("target_id=? and img_type=2", v.ID).Delete(Image{}).Error; err != nil {
 				tx.Rollback()
 				g.FResponse(nil)
@@ -465,7 +526,11 @@ func UpdateShop(c *gin.Context) {
 			//添加款式
 			v.ShopStyle.ID = 0
 			v.ShopStyle.ShopId = req.Shop.ShopInfo.ID
+			//for i,_:=range v.ShopStyle.Image {
+			//	v.ShopStyle.Image[i].CreateAt=utils.GetStringDateTime(time.Now())
+			//}
 			shopStyle := v.ShopStyle
+			shopStyle.Image=nil
 			if err := tx.Create(&shopStyle).Error; err != nil {
 				tx.Rollback()
 				g.FResponse(nil)
@@ -492,10 +557,23 @@ func UpdateShop(c *gin.Context) {
 		delete(shopMap, "shop_style")
 		delete(shopMap, "image")
 		delete(shopMap, "shop_type")
+		delete(shopMap,"tag")
+		delete(shopMap,"tag_id")
+		delete(shopMap,"tag_type")
 		if err := tx.Table("shop_info").Where("id=?", req.Shop.ShopInfo.ID).Update(shopMap).Error; err != nil {
 			tx.Rollback()
 			g.FResponse(nil)
 			return
+		}
+		tx.Where("shop_info_id=?", req.Shop.ShopInfo.ID).Delete(TagType{})
+		for _,v:=range req.Shop.ShopInfo.TagId{
+			tagType := TagType{TagId:int64(v),ShopTypeId:req.Shop.ShopInfo.TypeId,ShopInfoId:req.Shop.ShopInfo.ID}
+			err:=tx.Create(&tagType).Error
+			if err!=nil {
+				g.FResponse(nil)
+				tx.Rollback()
+				break
+			}
 		}
 		tx.Commit()
 		g.Response(nil)
@@ -591,6 +669,36 @@ func UpdateShop(c *gin.Context) {
 	//go deleteImages(deleteImage)
 }
 
+func deleteImg(id string,img_type int)  {
+	var oldImages []Image
+	var deletImage []string
+	//删除磁盘文件
+	db.SqlDB.Find(&oldImages,"target_id=? and img_type=?",id,img_type)
+	for _,v:=range oldImages{
+		deletImage=append(deletImage,v.ImgUrl)
+	}
+	go deleteImages(deletImage)
+}
+
+func deleteUpImg(id int64,img_type int,image []Image)  {
+	var oldImages []Image
+	var deletImage []string
+	//删除磁盘文件
+	db.SqlDB.Find(&oldImages,"target_id=? and img_type=?",id,img_type)
+	for _,img:=range oldImages{
+		flag := false
+		for _,v:=range image{
+			if v.ImgUrl == img.ImgUrl {
+				flag=true
+				break
+			}
+		}
+		if !flag {
+			deletImage=append(deletImage,img.ImgUrl)
+		}
+	}
+	go deleteImages(deletImage)
+}
 func deleteImages(imgs []string) {
 	for _, v := range imgs {
 		DeleteTargetImg(v)

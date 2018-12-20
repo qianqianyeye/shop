@@ -17,6 +17,9 @@ type ShopInfo struct {
 	CreateAt string `gorm:"column:create_at" json:"create_at"`
 	UpdateAt string `gorm:"column:update_at" json:"update_at"`
 
+	TagId []int `gorm:"-" json:"tag_id,omitempty"`
+	Tags []*Tag `gorm:"many2many:tag_type;"json:"tag_type,omitempty"`
+
 	ShopStyle []ShopStyle `gorm:"ForeignKey:ShopId;AssociationForeignKey:ID;" json:"shop_style,omitempty"`
 	Image []Image `gorm:"ForeignKey:TargetId;AssociationForeignKey:ID;" json:"image,omitempty"`
 	ShopType []ShopType `gorm:"ForeignKey:ID;AssociationForeignKey:TypeId;" json:"shop_type,omitempty"`

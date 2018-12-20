@@ -39,9 +39,12 @@ func main()  {
 
 	//移动端
 	mobile := router.Group("/mobile/v1")
+	mobile.GET("shop/tags",m.QueryTag)
+	mobile.GET("shop/tagstype",m.GetTagsType)
 	mobile.GET("shop/type",m.GetShopType) //获取商品类别
 	mobile.GET("shop/list",m.GetShopList) //商品列表
 	mobile.GET("shop/details/:id",m.GetShopDetails) //商品详情
+	mobile.GET("shop/hot",m.GetHotList)
 	mobile.GET("shop/search",m.GetShopSearch) //搜索商品
 	mobile.GET("shop/latestversion/:app_type",m.GetLatestVersion) //获取app最新版本号
 

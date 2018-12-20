@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
 	a "shop/admin/handler/v1/sadmin"
-	_ "shop/admin/docs"
 	"net/http"
 )
 
@@ -43,10 +42,19 @@ func main()  {
 	//后台
 	//商品类别
 	admin := router.Group("/admin/v1")
+	//admin.GET("shop/parenttype",a.)
 	admin.GET("shop/typelist",a.GetShopType)  //商品类别
 	admin.POST("shop/atype",a.AddShopType)  //添加商品类别
 	admin.PATCH("shop/utype",a.UpdateShopType)  //修改商品类别
 	admin.DELETE("shop/dtype/:id",a.DeleteShopType) //删除商品类别
+
+	admin.GET("shop/tag",a.QueryTag)
+	admin.POST("shop/atag",a.AddTag)  //添加tag
+	admin.PATCH("shop/utag",a.UpdateTag)  //修改tag
+	admin.DELETE("shop/dtag/:id",a.DeleteTag) //删除tag
+	admin.GET("shop/tagtype",a.GetTagsType)
+
+	admin.DELETE("shop/dshoptag",a.DeleteShopTag)
 
 	//关键词
 	admin.GET("shop/hotkey",a.GetHotKey)
@@ -74,6 +82,7 @@ func main()  {
 
 	//登陆
 	admin.POST("login",a.Login)
+	admin.GET("user/status",a.GetCurStatus)
 	admin.PATCH("update/userinfo",a.UpdateUserInfo)
 
 	//图片上传
